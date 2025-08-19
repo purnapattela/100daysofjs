@@ -1,0 +1,1 @@
+[console object](https://dev.to/srijan_karki/exploring-javascript-console-methods-beyond-consolelog-4en7)
