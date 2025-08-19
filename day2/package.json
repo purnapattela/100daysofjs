@@ -1,0 +1,40 @@
+{
+  "name": "100daysofjs",
+  "version": "1.0.0",
+  "description": "Day2 of my 100 days of js | basics of js",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src",
+    "build": "webpack --mode development",
+    "dev": "webpack serve --mode development"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/purnapattela/100daysofjs.git"
+  },
+  "keywords": [
+    "100daysofjs",
+    "NodeJS",
+    "BuildInPublic",
+    "javascript"
+  ],
+  "author": "purnapattela",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/purnapattela/100daysofjs/issues"
+  },
+  "homepage": "https://github.com/purnapattela/100daysofjs#readme",
+  "devDependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.33.0",
+    "html-webpack-plugin": "^5.6.4",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
+}
