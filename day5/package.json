@@ -1,0 +1,16 @@
+{
+  "name": "day5",
+  "version": "1.0.0",
+  "description": "This is a day5 of my 100days nodejs",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "execute": "node index.js"
+  },
+  "keywords": [],
+  "author": "purnapattela",
+  "license": "ISC",
+  "dependencies": {
+    "eventemitter3": "^5.0.1"
+  }
+}
