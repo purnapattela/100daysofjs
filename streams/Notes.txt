@@ -1,0 +1,29 @@
+Internal Buffer size in Nodejs is : 16384 Bytes - writable
+Internal Buffer size in Nodejs is : 65536 Bytes - readable
+
+
+8 Bits == 1 Byte(B)
+1000 Bytes == 1 KiloByte(KB)
+1000 KiloBytes == 1 MegaByte(MB)
+1000 MegaBytes == 1 GibaByte(GB)
+
+
+* stream.write() returns true/false
+    - false means the internal buffer is full
+    - true is just opposite to false you GENTLEMAN 😒
+
+
+We can create our owm streams using Buffer :: fs.read , fs.write
+* Advantages
+    Full control over memory and chunk size.
+    Can transform data on the fly (e.g., modify numbers, compress, encrypt).
+    Doesn’t rely on Node.js internal streams, so it’s transparent how memory and I/O are handled.
+
+* Disadvantages
+    You have to manually handle backpressure if writing to slow devices or network streams.
+    Less convenient than createReadStream / createWriteStream which handle high-water marks and backpressure automatically.
+
+
+Pipeleine:
+    it is many used to handle the error cases of the pipe when we perform multiple writes using a read..
+    there is a package called pump for same usecase
