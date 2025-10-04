@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Todo App (No DB) — Demo Client</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+        max-width: 800px;
+        margin: 24px auto;
+        padding: 16px;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      input,
+      button,
+      textarea {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+      }
+      .hidden {
+        display: none;
+      }
+      .todo {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #eee;
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .todo .left {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Todos (Local Auth)</h1>
+      <div id="userInfo"></div>
+    </header>
+
+    <section id="authSection">
+      <h2>Register / Login</h2>
+      <div>
+        <input id="username" placeholder="username" />
+        <input id="password" type="password" placeholder="password" />
+        <button id="registerBtn">Register</button>
+        <button id="loginBtn">Login</button>
+      </div>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <h2>Your Todos</h2>
+      <div>
+        <input id="newTodoTitle" placeholder="New todo title" />
+        <button id="addTodoBtn">Add</button>
+        <button id="logoutBtn">Logout</button>
+      </div>
+      <div id="todosList"></div>
+    </section>
+
+    <script>
+      const API = "/api";
+      const usernameInput = document.getElementById("username");
+      const passwordInput = document.getElementById("password");
+      const registerBtn = document.getElementById("registerBtn");
+      const loginBtn = document.getElementById("loginBtn");
+      const appSection = document.getElementById("appSection");
+      const authSection = document.getElementById("authSection");
+      const userInfo = document.getElementById("userInfo");
+      const newTodoTitle = document.getElementById("newTodoTitle");
+      const addTodoBtn = document.getElementById("addTodoBtn");
+      const todosList = document.getElementById("todosList");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      function setToken(token) {
+        if (token) localStorage.setItem("token", token);
+        else localStorage.removeItem("token");
+        updateUI();
+      }
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      async function api(path, opts = {}) {
+        const headers = opts.headers || {};
+        headers["Content-Type"] = "application/json";
+        const token = getToken();
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(API + path, { ...opts, headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "API error");
+        return data;
+      }
+
+      async function register() {
+        try {
+          const u = usernameInput.value.trim();
+          const p = passwordInput.value;
+          if (!u || !p) return alert("username & password required");
+          await api("/register", {
+            method: "POST",
+            body: JSON.stringify({ username: u, password: p }),
+          });
+          alert("Registered. Now login.");
+        } catch (e) {
+          alert("Register error: " + e.message);
+        }
+      }
+
+      async function login() {
+        try {
+          const u = usernameInput.value.trim();
+          const p = passwordInput.value;
+          if (!u || !p) return alert("username & password required");
+          const data = await api("/login", {
+            method: "POST",
+            body: JSON.stringify({ username: u, password: p }),
+          });
+          setToken(data.token);
+          usernameInput.value = "";
+          passwordInput.value = "";
+        } catch (e) {
+          alert("Login error: " + e.message);
+        }
+      }
+
+      async function loadMe() {
+        try {
+          const data = await api("/me", { method: "GET" });
+          return data;
+        } catch (e) {
+          // token invalid
+          setToken(null);
+          return null;
+        }
+      }
+
+      function showAuth() {
+        authSection.classList.remove("hidden");
+        appSection.classList.add("hidden");
+        userInfo.textContent = "";
+      }
+
+      function showApp(user) {
+        authSection.classList.add("hidden");
+        appSection.classList.remove("hidden");
+        userInfo.textContent = `Signed in: ${user.username}`;
+      }
+
+      async function updateUI() {
+        const t = getToken();
+        if (!t) return showAuth();
+        const me = await loadMe();
+        if (!me) return showAuth();
+        showApp(me);
+        await loadTodos();
+      }
+
+      async function loadTodos() {
+        try {
+          const data = await api("/todos", { method: "GET" });
+          renderTodos(data.todos || []);
+        } catch (e) {
+          alert("Failed to load todos: " + e.message);
+          renderTodos([]);
+        }
+      }
+
+      function renderTodos(todos) {
+        todosList.innerHTML = "";
+        if (todos.length === 0) {
+          todosList.innerHTML = "<p>No todos yet.</p>";
+          return;
+        }
+        for (const t of todos) {
+          const el = document.createElement("div");
+          el.className = "todo";
+          el.innerHTML = `
+          <div class="left">
+            <input type="checkbox" ${t.completed ? "checked" : ""} data-id="${
+            t.id
+          }" class="toggle" />
+            <div>
+              <div><strong>${escapeHtml(t.title)}</strong></div>
+              <div style="font-size:12px;color:#666">${new Date(
+                t.createdAt
+              ).toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="controls">
+            <button data-id="${t.id}" class="edit">Edit</button>
+            <button data-id="${t.id}" class="del">Delete</button>
+          </div>
+        `;
+          todosList.appendChild(el);
+        }
+
+        // event delegation
+        todosList
+          .querySelectorAll(".toggle")
+          .forEach((cb) => cb.addEventListener("change", onToggle));
+        todosList
+          .querySelectorAll(".del")
+          .forEach((b) => b.addEventListener("click", onDelete));
+        todosList
+          .querySelectorAll(".edit")
+          .forEach((b) => b.addEventListener("click", onEdit));
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[c])
+        );
+      }
+
+      async function onToggle(e) {
+        const id = e.target.dataset.id;
+        const completed = e.target.checked;
+        try {
+          await api("/todos/" + id, {
+            method: "PUT",
+            body: JSON.stringify({ completed }),
+          });
+          await loadTodos();
+        } catch (err) {
+          alert("Update failed: " + err.message);
+        }
+      }
+
+      async function onDelete(e) {
+        const id = e.target.dataset.id;
+        if (!confirm("Delete this todo?")) return;
+        try {
+          await api("/todos/" + id, { method: "DELETE" });
+          await loadTodos();
+        } catch (err) {
+          alert("Delete failed: " + err.message);
+        }
+      }
+
+      async function onEdit(e) {
+        const id = e.target.dataset.id;
+        const newTitle = prompt("New title");
+        if (newTitle == null) return;
+        try {
+          await api("/todos/" + id, {
+            method: "PUT",
+            body: JSON.stringify({ title: newTitle }),
+          });
+          await loadTodos();
+        } catch (err) {
+          alert("Edit failed: " + err.message);
+        }
+      }
+
+      async function addTodo() {
+        const title = newTodoTitle.value.trim();
+        if (!title) return alert("title required");
+        try {
+          await api("/todos", {
+            method: "POST",
+            body: JSON.stringify({ title }),
+          });
+          newTodoTitle.value = "";
+          await loadTodos();
+        } catch (e) {
+          alert("Add failed: " + e.message);
+        }
+      }
+
+      function logout() {
+        setToken(null);
+      }
+
+      // attach events
+      registerBtn.addEventListener("click", register);
+      loginBtn.addEventListener("click", login);
+      addTodoBtn.addEventListener("click", addTodo);
+      logoutBtn.addEventListener("click", logout);
+
+      // init
+      updateUI();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "ppc",
+      "passwordHash": "ede1f263171acb2b74fdac184e1f3e901a2fbaa229625858dc42a4d9a68dc4c672d2d0382ea3bd1a5e6843566a0f15114369cbb94d40eff0923328a1fc7acd51",
+      "salt": "7cd98d5cd9340ff7e18333922c9eea4c"
+    }
+  ],
+  "todos": [
+    {
+      "id": 1,
+      "userId": 1,
+      "title": "Job @ My own SAAS",
+      "completed": false,
+      "createdAt": "2025-10-04T17:38:57.507Z",
+      "updatedAt": "2025-10-04T17:39:09.180Z"
+    }
+  ],
+  "lastIds": {
+    "user": 1,
+    "todo": 1
+  }
+}
