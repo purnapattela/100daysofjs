@@ -1,0 +1,14 @@
+                            steps-to-execute-c
+1.editing/writing(.c)
+2.compiling(.obj)
+3.linking(.out or .exe)
+4.executing
+
+                Compiling code not letting it to linking
+gcc -c inputfile.c
+
+----------------------------------------------------------------------------
+Preprocessor uses : 
+1. include header files
+2. include conditional compilation i mean based on some thing we can add a new headerfile or operation
+3. macro's
