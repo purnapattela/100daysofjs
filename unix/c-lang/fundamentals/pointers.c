@@ -8,6 +8,12 @@ int main(){
     char *greet = "Hello World";
     char *arr[] = {"a","b" ,"c"};
     puts(greet);
-    printf("%lu",length(arr));
+    printf("%lu\n",length(arr));
+    printf("%c",*arr[0]);
     return EXIT_SUCCESS;
 }
+
+/**
+ *     -> '*' dereference operator
+ *     -> '&' address-of operator
+ */
