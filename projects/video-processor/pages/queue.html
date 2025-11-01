@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-800">🎬 Video Processor</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="/pages/upload.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Upload</a>
+                    <a href="/pages/queue.html" class="text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Queue</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-12">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-900">Processing Queue</h2>
+            <p class="text-gray-600 mt-2">Track your video processing status in real-time</p>
+        </div>
+
+        <div id="queueContainer" class="space-y-4">
+            <div class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="text-gray-500 mt-4">Loading queue...</p>
+            </div>
+        </div>
+
+        <div id="emptyState" class="hidden text-center py-12">
+            <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
+            </svg>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No videos in queue</h3>
+            <p class="mt-2 text-gray-500">Upload a video to get started</p>
+            <a href="/pages/upload.html" class="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Upload Video</a>
+        </div>
+    </main>
+
+    <script>
+        let pollInterval;
+
+        function getStatusColor(status) {
+            const colors = {
+                queued: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                processing: 'bg-blue-100 text-blue-800 border-blue-200',
+                completed: 'bg-green-100 text-green-800 border-green-200',
+                failed: 'bg-red-100 text-red-800 border-red-200'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                queued: '⏳',
+                processing: '⚙️',
+                completed: '✅',
+                failed: '❌'
+            };
+            return icons[status] || '📄';
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function renderQueue(queue) {
+            const container = document.getElementById('queueContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!queue || queue.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            
+            container.innerHTML = queue.map(function(job) {
+                const statusIcon = getStatusIcon(job.status);
+                const statusColor = getStatusColor(job.status);
+                const statusText = job.status === 'processing' ? 'Processing' : job.status.charAt(0).toUpperCase() + job.status.slice(1);
+                let progressBar = '';
+                if (job.status === 'processing' || job.status === 'queued') {
+                    progressBar = '<div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: ' + (job.progress || 0) + '%"></div></div><p class="text-xs text-gray-500 mt-1">' + (job.progress || 0) + '% complete</p>';
+                }
+                
+                let actionButton = '';
+                if (job.status === 'completed') {
+                    actionButton = '<a href="/pages/video.html?id=' + job.id + '" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Watch</a>';
+                } else {
+                    actionButton = '<button class="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed" disabled><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>Processing</button>';
+                }
+                
+                return '<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"><div class="flex items-start justify-between"><div class="flex-1"><div class="flex items-center space-x-3"><span class="text-2xl">' + statusIcon + '</span><div><h3 class="text-lg font-semibold text-gray-900">' + job.originalName + '</h3><p class="text-sm text-gray-500">Uploaded: ' + formatDate(job.uploadTime) + '</p></div></div><div class="mt-4"><div class="flex items-center justify-between mb-2"><span class="text-sm font-medium text-gray-700">' + statusText + '</span><span class="px-3 py-1 rounded-full text-xs font-medium border ' + statusColor + '">' + job.status.toUpperCase() + '</span></div>' + progressBar + '</div></div><div class="ml-4">' + actionButton + '</div></div></div>';
+            }).join('');
+        }
+
+        async function fetchQueue() {
+            try {
+                const response = await fetch('/queue-status');
+                const queue = await response.json();
+                renderQueue(queue);
+            } catch (error) {
+                console.error('Error fetching queue:', error);
+            }
+        }
+
+        // Initial fetch
+        fetchQueue();
+
+        // Poll every 2 seconds
+        pollInterval = setInterval(fetchQueue, 2000);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(pollInterval);
+        });
+    </script>
+</body>
+</html>

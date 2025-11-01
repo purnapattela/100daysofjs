@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Video</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-800">🎬 Video Processor</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="/pages/upload.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Upload</a>
+                    <a href="/pages/queue.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Queue</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 py-12">
+        <div class="mb-4">
+            <a href="/pages/queue.html" class="inline-flex items-center text-blue-600 hover:text-blue-700">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Queue
+            </a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div id="videoContainer" class="bg-black">
+                <video id="videoPlayer" class="w-full" controls></video>
+            </div>
+            
+            <div class="p-6">
+                <h2 id="videoTitle" class="text-2xl font-bold text-gray-900 mb-2">Loading...</h2>
+                <p id="videoInfo" class="text-gray-600"></p>
+                
+                <div id="errorMessage" class="hidden mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                    <p class="font-semibold">Error loading video</p>
+                    <p class="text-sm mt-1"></p>
+                </div>
+
+                <div id="loadingMessage" class="mt-4 text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                    <p class="text-gray-600 mt-3">Loading video...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-semibold text-blue-900 mb-2">📺 Video Player Features</h3>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li>• Progressive streaming with HLS format</li>
+                <li>• Adaptive bitrate for smooth playback</li>
+                <li>• Seekable timeline with segment loading</li>
+                <li>• Full playback controls (play, pause, volume, fullscreen)</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('id');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoTitle = document.getElementById('videoTitle');
+        const videoInfo = document.getElementById('videoInfo');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingMessage = document.getElementById('loadingMessage');
+
+        if (!videoId) {
+            errorMessage.classList.remove('hidden');
+            errorMessage.querySelector('p.text-sm').textContent = 'No video ID provided.';
+            loadingMessage.classList.add('hidden');
+        } else {
+            loadVideo(videoId);
+        }
+
+        async function loadVideo(id) {
+            try {
+                // Fetch video info from queue
+                const queueResponse = await fetch('/queue-status');
+                const queue = await queueResponse.json();
+                const video = queue.find(v => v.id === id);
+
+                if (!video) {
+                    throw new Error('Video not found in queue');
+                }
+
+                if (video.status !== 'completed') {
+                    throw new Error('Video is still processing. Please wait.');
+                }
+
+                videoTitle.textContent = video.originalName;
+                videoInfo.textContent = 'Processed on ' + new Date(video.uploadTime).toLocaleString();
+
+                // Load HLS video
+                const videoSrc = '/processed/' + id + '/output.m3u8';
+
+                if (Hls.isSupported()) {
+                    const hls = new Hls({
+                        debug: false,
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                    });
+                    
+                    hls.loadSource(videoSrc);
+                    hls.attachMedia(videoPlayer);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        loadingMessage.classList.add('hidden');
+                        videoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
+                    });
+
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) {
+                            errorMessage.classList.remove('hidden');
+                            errorMessage.querySelector('p.text-sm').textContent = 'HLS loading error: ' + data.type;
+                            loadingMessage.classList.add('hidden');
+                        }
+                    });
+                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS support (Safari)
+                    videoPlayer.src = videoSrc;
+                    videoPlayer.addEventListener('loadedmetadata', function() {
+                        loadingMessage.classList.add('hidden');
+                        videoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
+                    });
+                } else {
+                    throw new Error('HLS is not supported in this browser');
+                }
+
+            } catch (error) {
+                console.error('Error loading video:', error);
+                errorMessage.classList.remove('hidden');
+                errorMessage.querySelector('p.text-sm').textContent = error.message;
+                loadingMessage.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
